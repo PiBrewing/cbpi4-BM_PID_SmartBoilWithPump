@@ -18,10 +18,8 @@ import datetime
 class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
 
 
-    async def stop(self):
-        self.task.cancel()
+    async def on_stop(self):
         await self.actor_off(self.agitator)
-        await self.task
     
     async def run(self):
         self._logger = logging.getLogger(type(self).__name__)
@@ -38,16 +36,18 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
             mash_pump_rest_interval = float(self.props.get("Rest_Interval", 600))
             mash_pump_rest_time = float(self.props.get("Rest_Time", 60))
             Pump_Max_Temp = 88
-            self.TEMP_UNIT = "C"
+            self.TEMP_UNIT = self.get_config_value("TEMP_UNIT", "C")
 
             self.kettle = self.get_kettle(self.id)
-            self.heater = self.kettle.get("heater")
-            self.agitator = self.kettle.get("agitator")
+            self.heater = self.kettle.heater
+            self.agitator = self.kettle.agitator
 
             if self.TEMP_UNIT != "C":        
                 maxtemppid = round(9.0 / 5.0 * Max_PID_Temp + 32, 2)
+                pump_max_temp = round(9.0 / 5.0 * Pump_Max_Temp + 32, 2)
             else:
                 maxtemppid = float(Max_PID_Temp)
+                pump_max_temp = float(Pump_Max_Temp)
 
             pid = BM_PIDArduino(sampleTime, p, i, d, 0, maxoutput)
 
@@ -57,22 +57,16 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
 
             next_pump_start = 0
             next_pump_rest = None
-
-            # convert value to if, if F is set in cofig
-            if self.TEMP_UNIT != "C":        
-                pump_max_temp = round(9.0 / 5.0 * Pump_Max_Temp + 32, 2)
-            else:       
-                pump_max_temp = int(Pump_Max_Temp)
             pump_boil_auto_off_control_enabled = True
 
-            if (self.get_sensor_value(self.kettle.get("sensor")).get("value") < pump_max_temp):
+            if (self.get_sensor_value(self.kettle.sensor).get("value") < pump_max_temp):
                 await self.actor_on(self.agitator)
+                print("Switching Pump on")
 
-            logging.info("CustomLogic P:{} I:{} D:{} {} {}".format(p, i, d, self.id, self.heater))
+            logging.info("CustomLogic P:{} I:{} D:{} {} {}".format(p, i, d, self.kettle, self.heater))
             while True:
-                sensor_value = current_temp = self.get_sensor_value(self.kettle.get("sensor")).get("value")
-                target_temp = self.get_kettle_target_temp(self.kettle.get("id"))
-
+                sensor_value = current_temp = self.get_sensor_value(self.kettle.sensor).get("value")
+                target_temp = self.get_kettle_target_temp(self.id)
                 self._logger.debug("calculation cycle")
                 inner_loop_now = calculation_loop_start = time.time()
                 next_calculation_time = calculation_loop_start + sampleTime
@@ -118,16 +112,21 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
                             pump_boil_auto_off_control_enabled = True
                             await self.actor_off(self.agitator)
                     else:
-                        if next_pump_start is not None and inner_loop_now >= next_pump_start:
-                            self._logger.debug("starting pump")
-                            next_pump_start = None
-                            next_pump_rest = inner_loop_now + mash_pump_rest_interval
-                            await self.actor_on(self.agitator)
-                        elif next_pump_rest is not None and inner_loop_now >= next_pump_rest:
-                            self._logger.debug("resting pump")
-                            next_pump_rest = None
-                            next_pump_start = inner_loop_now + mash_pump_rest_time
-                            await self.actor_off(self.agitator)
+                        if current_temp < pump_max_temp:
+                            if next_pump_start is not None and inner_loop_now >= next_pump_start:
+                                self._logger.debug("starting pump")
+                                next_pump_start = None
+                                next_pump_rest = inner_loop_now + mash_pump_rest_interval
+                                await self.actor_on(self.agitator)
+                            elif next_pump_rest is not None and inner_loop_now >= next_pump_rest:
+                                self._logger.debug("resting pump")
+                                next_pump_rest = None
+                                next_pump_start = inner_loop_now + mash_pump_rest_time
+                                await self.actor_off(self.agitator)
+                        else:
+                            if self.get_actor_state(self.agitator) == True:
+                                await self.actor_off(self.agitator)
+
 
                     await asyncio.sleep(internal_loop_time)
                     inner_loop_now = time.time()
@@ -135,7 +134,7 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
         except asyncio.CancelledError as e:
             pass
         except Exception as e:
-            logging.error("CustomLogic Error {}".format(e))
+            logging.error("BM_PIDSmartBoilWithPump Error {}".format(e))
         finally:
             self.running = False
             await self.actor_off(self.heater)
