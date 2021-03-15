@@ -64,7 +64,7 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
                 print("Switching Pump on")
 
             logging.info("CustomLogic P:{} I:{} D:{} {} {}".format(p, i, d, self.kettle, self.heater))
-            while True:
+            while self.running == True:
                 sensor_value = current_temp = self.get_sensor_value(self.kettle.sensor).get("value")
                 target_temp = self.get_kettle_target_temp(self.id)
                 self._logger.debug("calculation cycle")

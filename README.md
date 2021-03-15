@@ -24,3 +24,7 @@
 	- Max PID Temp: PID is switched off above this temperature -> 88°C / 190F
 	- Max 'Pump Temp: Pump is switched of above this temperatre and cannot be switched back on -> 88°C 190F
 
+
+Changelog:
+
+15.03.21: Support for cbpi >= 4.0.0.32
