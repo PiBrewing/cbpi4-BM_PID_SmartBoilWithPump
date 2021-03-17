@@ -22,7 +22,7 @@
 	- Rest Time: Pump is switched off for specified time in seconds
 - Fixed in Code:
 	- Max PID Temp: PID is switched off above this temperature -> 88°C / 190F
-	- Max 'Pump Temp: Pump is switched of above this temperatre and cannot be switched back on -> 88°C 190F
+	- Max Pump Temp: Pump is switched of above this temperatre and cannot be switched back on -> 88°C 190F
 
 
 Changelog:
