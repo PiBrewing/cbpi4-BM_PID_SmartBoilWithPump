@@ -49,6 +49,7 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
             else:
                 if self.get_actor_state(self.agitator):
                     await self.actor_off(self.agitator)
+                    await asyncio.sleep(2)
 
     async def temp_control(self):
         while self.running:
