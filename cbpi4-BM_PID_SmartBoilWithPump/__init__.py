@@ -51,25 +51,25 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
                 if self.get_actor_state(self.agitator):
                     await self.actor_off(self.agitator)
 
-    async def temp_control(self):
-        while self.running:
-            sensor_value = current_temp = self.get_sensor_value(self.kettle.sensor).get("value")
-            target_temp = self.get_kettle_target_temp(self.id)
-            if current_temp >= self.max_boil_temp:
-                heat_percent = self.max_output_boil
-            elif current_temp >= self.max_pid_temp:
-                heat_percent = self.max_output
-            else:
-                heat_percent = self.pid.calc(sensor_value, target_temp)
-
-            heating_time = self.sample_time * heat_percent / 100
-            wait_time = self.sample_time - heating_time
-            if heating_time > 0:
-                await self.actor_on(self.heater)
-                await asyncio.sleep(heating_time)
-            if wait_time > 0:
-                await self.actor_off(self.heater)
-                await asyncio.sleep(wait_time)
+    # async def temp_control(self):
+    #     while self.running:
+    #         sensor_value = current_temp = self.get_sensor_value(self.kettle.sensor).get("value")
+    #         target_temp = self.get_kettle_target_temp(self.id)
+    #         if current_temp >= self.max_boil_temp:
+    #             heat_percent = self.max_output_boil
+    #         elif current_temp >= self.max_pid_temp:
+    #             heat_percent = self.max_output
+    #         else:
+    #             heat_percent = self.pid.calc(sensor_value, target_temp)
+    #
+    #         heating_time = self.sample_time * heat_percent / 100
+    #         wait_time = self.sample_time - heating_time
+    #         if heating_time > 0:
+    #             await self.actor_on(self.heater)
+    #             await asyncio.sleep(heating_time)
+    #         if wait_time > 0:
+    #             await self.actor_off(self.heater)
+    #             await asyncio.sleep(wait_time)
 
     async def run(self):
         try:
@@ -103,10 +103,10 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
             logging.info("CustomLogic P:{} I:{} D:{} {} {}".format(p, i, d, self.kettle, self.heater))
 
             pump_controller = asyncio.create_task(self.pump_control())
-            temp_controller = asyncio.create_task(self.temp_control())
+            # temp_controller = asyncio.create_task(self.temp_control())
 
             await pump_controller
-            await temp_controller
+            # await temp_controller
 
         except asyncio.CancelledError as e:
             pass
