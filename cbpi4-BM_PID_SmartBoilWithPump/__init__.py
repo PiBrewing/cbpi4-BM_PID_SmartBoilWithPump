@@ -27,7 +27,7 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
         super().__init__(cbpi, id, props)
         self._logger = logging.getLogger(type(self).__name__)
         self.sample_time, self.max_output, self.pid = None, None, None
-        self.work_time, self.rest_time, self.max_output_boil, self.max_boil_temp, self.max_pid_temp, self.max_pump_temp\
+        self.work_time, self.rest_time, self.max_output_boil, self.max_boil_temp, self.max_pid_temp, self.max_pump_temp \
             = None, None, None, None, None, None
         self.kettle, self.heater, self.agitator = None, None, None
 
@@ -50,7 +50,6 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
             else:
                 if self.get_actor_state(self.agitator):
                     await self.actor_off(self.agitator)
-
 
     async def temp_control(self):
         while self.running:
@@ -191,8 +190,8 @@ class PIDArduino(object):
     def _currentTimeMs(self):
         return time.time() * 1000
 
-def setup(cbpi):
 
+def setup(cbpi):
     '''
     This method is called by the server during startup 
     Here you need to register your plugins at the server
@@ -202,19 +201,3 @@ def setup(cbpi):
     '''
 
     cbpi.plugin.register("BM_PID_SmartBoilWithPump", BM_PID_SmartBoilWithPump)
-
-
-class Mock:
-
-    def __init__(self):
-        self.kettle = "a"
-
-    async def get(self, a, b):
-        return a
-
-
-if __name__ == '__main__':
-    bm = BM_PID_SmartBoilWithPump(Mock(), 1, Mock())
-    loop = asyncio.get_event_loop()
-    coroutine = bm.run()
-    loop.run_until_complete(coroutine)
