@@ -5,7 +5,6 @@ from cbpi.api import *
 import time
 import datetime
 import threading
-from cbpi.api.dataclasses import NotificationAction, NotificationType
 
 
 
@@ -20,8 +19,6 @@ from cbpi.api.dataclasses import NotificationAction, NotificationType
                              description="When Temperature reaches this, power will be reduced to Max Boil Output."),
              Property.Number(label="Max_PID_Temp", configurable=True,
                              description="When this temperature is reached, PID will be turned off"),
-             Property.Number(label="Internal_loop", configurable=True, default_value=0.2,
-                             description="In seconds, how quickly the internal loop will run, dictates maximum PID resolution."),
              Property.Number(label="Rest_Interval", configurable=True, default_value=600,
                              description="Rest the pump after this many seconds during the mash."),
              Property.Number(label="Rest_Time", configurable=True, default_value=60,
@@ -31,7 +28,6 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
     def __init__(self, cbpi, id, props):
         super().__init__(cbpi, id, props)
         self._logger = logging.getLogger(type(self).__name__)
-        self.pump_thread = None
 
     async def on_stop(self):
         await self.actor_off(self.agitator)
@@ -39,22 +35,21 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
     async def pump_control(self, pump_max_temp):
         work_time = float(self.props.get("Rest_Interval", 600))
         rest_time = float(self.props.get("Rest_Time", 60))
-        self.cbpi.notify(self.name, "pump thread", NotificationType.INFO)
         while True:
             if self.get_sensor_value(self.kettle.sensor).get("value") < pump_max_temp:
                 self._logger.debug("starting pump")
-                await self.actor_on(self.agitator)
+                # await self.actor_on(self.agitator)
                 off_time = time.time() + work_time
                 while time.time() < off_time:
-                    if self.get_sensor_value(self.kettle.sensor).get("value") >= pump_max_temp:
-                        await self.actor_off(self.agitator)
+                    # if self.get_sensor_value(self.kettle.sensor).get("value") >= pump_max_temp:
+                        # await self.actor_off(self.agitator)
                     await asyncio.sleep(2)
                 self._logger.debug("resting pump")
-                await self.actor_off(self.agitator)
+                # await self.actor_off(self.agitator)
                 await asyncio.sleep(rest_time)
-            else:
-                if self.get_actor_state(self.agitator):
-                    await self.actor_off(self.agitator)
+            # else:
+                # if self.get_actor_state(self.agitator):
+                #     await self.actor_off(self.agitator)
 
     async def run(self):
         try:
@@ -67,60 +62,54 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
             Pump_Max_Temp = float(self.props.get("Max_Pump_Temp", 110))
             maxoutputboil = float(self.props.get("Max_Boil_Output", 85))
             maxtempboil = float(self.props.get("Max_Boil_Temp", 98))
-            internal_loop_time = float(self.props.get("Internal_loop", 0.2))
 
-            self.TEMP_UNIT = self.get_config_value("TEMP_UNIT", "C")
+            # self.TEMP_UNIT = self.get_config_value("TEMP_UNIT", "C")
 
-            self.kettle = self.get_kettle(self.id)
-            self.heater = self.kettle.heater
-            self.agitator = self.kettle.agitator
+            # self.kettle = self.get_kettle(self.id)
+            # self.heater = self.kettle.heater
+            # self.agitator = self.kettle.agitator
 
-            if self.TEMP_UNIT != "C":
-                maxtemppid = round(9.0 / 5.0 * Max_PID_Temp + 32, 2)
-                pump_max_temp = round(9.0 / 5.0 * Pump_Max_Temp + 32, 2)
-            else:
-                maxtemppid = float(Max_PID_Temp)
-                pump_max_temp = float(Pump_Max_Temp)
+            # if self.TEMP_UNIT != "C":
+            #     maxtemppid = round(9.0 / 5.0 * Max_PID_Temp + 32, 2)
+            #     pump_max_temp = round(9.0 / 5.0 * Pump_Max_Temp + 32, 2)
+            # else:
+            #     maxtemppid = float(Max_PID_Temp)
+            #     pump_max_temp = float(Pump_Max_Temp)
 
-            self.pump_thread = threading.Thread(target=self.pump_control, args=pump_max_temp)
-            self.cbpi.notify(self.name, "after pump thread creation", NotificationType.INFO)
-
+            # self.pump_thread = threading.Thread(target=self.pump_control, args=pump_max_temp)
             pid = PIDArduino(sampleTime, p, i, d, 0, maxoutput)
 
-            self._logger.debug(self.props.get("Internal_Loop", 0.2))
-            self._logger.debug(internal_loop_time)
+            # logging.info("CustomLogic P:{} I:{} D:{} {} {}".format(p, i, d, self.kettle, self.heater))
 
-            logging.info("CustomLogic P:{} I:{} D:{} {} {}".format(p, i, d, self.kettle, self.heater))
+            while await self.pump_control(110):
+                current_temp, sensor_value, target_temp = 10, 10, 10  # todo
+                while self.running:
+                    # sensor_value = current_temp = self.get_sensor_value(self.kettle.sensor).get("value")
+                    # target_temp = self.get_kettle_target_temp(self.id)
+                    if current_temp >= maxtempboil:
+                        heat_percent = maxoutputboil
+                    # elif current_temp >= maxtemppid:
+                    elif current_temp >= 30:  # todo
+                        heat_percent = maxoutput
+                    else:
+                        heat_percent = pid.calc(sensor_value, target_temp)
 
-            self.pump_thread.start()
-            self.cbpi.notify(self.name, "after pump thread start", NotificationType.INFO)
-            while self.running:
-                sensor_value = current_temp = self.get_sensor_value(self.kettle.sensor).get("value")
-                target_temp = self.get_kettle_target_temp(self.id)
-                if current_temp >= maxtempboil:
-                    heat_percent = maxoutputboil
-                elif current_temp >= maxtemppid:
-                    heat_percent = maxoutput
-                else:
-                    heat_percent = pid.calc(sensor_value, target_temp)
-
-                heating_time = sampleTime * heat_percent / 100
-                wait_time = sampleTime - heating_time
-                if heating_time > 0:
-                    await self.actor_on(self.heater)
-                    await asyncio.sleep(heating_time)
-                if wait_time > 0:
-                    await self.actor_off(self.heater)
-                    await asyncio.sleep(wait_time)
+                    heating_time = sampleTime * heat_percent / 100
+                    wait_time = sampleTime - heating_time
+                    if heating_time > 0:
+                        # await self.actor_on(self.heater)
+                        await asyncio.sleep(heating_time)
+                    if wait_time > 0:
+                        # await self.actor_off(self.heater)
+                        await asyncio.sleep(wait_time)
 
         except asyncio.CancelledError as e:
             pass
         except Exception as e:
-            self.cbpi.notify(self.name, "BM_PIDSmartBoilWithPump Error {}".format(e), NotificationType.INFO)
             logging.error("BM_PIDSmartBoilWithPump Error {}".format(e))
         finally:
             self.running = False
-            await self.actor_off(self.heater)
+            # await self.actor_off(self.heater)
 
 
 # Based on Arduino PID Library
@@ -207,3 +196,19 @@ def setup(cbpi):
     '''
 
     cbpi.plugin.register("BM_PID_SmartBoilWithPump", BM_PID_SmartBoilWithPump)
+
+
+class Mock:
+
+    def __init__(self):
+        self.kettle = "a"
+
+    def get(self, a, b):
+        return 1
+
+
+if __name__ == '__main__':
+    bm = BM_PID_SmartBoilWithPump(Mock(), 1, Mock())
+    loop = asyncio.get_event_loop()
+    coroutine = bm.run()
+    loop.run_until_complete(coroutine)
