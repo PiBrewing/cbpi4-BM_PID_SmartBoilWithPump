@@ -28,6 +28,7 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
 
     def __init__(self, cbpi, id, props):
         super().__init__(cbpi, id, props)
+        logging.basicConfig(filename='pump.log', level=logging.DEBUG)
         self._logger = logging.getLogger(type(self).__name__)
         self.pump_thread = None
 
