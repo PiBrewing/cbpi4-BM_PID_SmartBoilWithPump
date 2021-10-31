@@ -33,7 +33,8 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
         await self.actor_off(self.agitator)
 
     async def pump_control(self):
-        pump_on = self.get_actor_state(self.agitator)
+        await self.actor_off(self.agitator)
+        pump_on = False
         while self.running:
             if self.get_sensor_value(self.kettle.sensor).get("value") < self.max_pump_temp:
                 self._logger.debug("starting pump")
@@ -54,7 +55,7 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
             else:
                 if pump_on:
                     self._logger.debug("pump max temp reached, pump turned off")
-                    # await self.actor_off(self.agitator)
+                    await self.actor_off(self.agitator)
                     pump_on = False
                     await asyncio.sleep(2)
 
