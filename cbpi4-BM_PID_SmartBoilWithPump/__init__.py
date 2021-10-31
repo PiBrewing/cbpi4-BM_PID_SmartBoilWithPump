@@ -5,6 +5,8 @@ from cbpi.api import *
 import time
 import datetime
 import threading
+from cbpi.api.dataclasses import NotificationAction, NotificationType
+
 
 
 @parameters([Property.Number(label="P", configurable=True, default_value=117.0795, description="P Value of PID"),
@@ -28,7 +30,6 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
 
     def __init__(self, cbpi, id, props):
         super().__init__(cbpi, id, props)
-        logging.basicConfig(filename='pump.log', level=logging.DEBUG)
         self._logger = logging.getLogger(type(self).__name__)
         self.pump_thread = None
 
@@ -38,6 +39,7 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
     async def pump_control(self, pump_max_temp):
         work_time = float(self.props.get("Rest_Interval", 600))
         rest_time = float(self.props.get("Rest_Time", 60))
+        self.cbpi.notify(self.name, "pump thread", NotificationType.INFO)
         while True:
             if self.get_sensor_value(self.kettle.sensor).get("value") < pump_max_temp:
                 self._logger.debug("starting pump")
@@ -81,6 +83,7 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
                 pump_max_temp = float(Pump_Max_Temp)
 
             self.pump_thread = threading.Thread(target=self.pump_control, args=pump_max_temp)
+            self.cbpi.notify(self.name, "after pump thread creation", NotificationType.INFO)
 
             pid = PIDArduino(sampleTime, p, i, d, 0, maxoutput)
 
@@ -90,6 +93,7 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
             logging.info("CustomLogic P:{} I:{} D:{} {} {}".format(p, i, d, self.kettle, self.heater))
 
             self.pump_thread.start()
+            self.cbpi.notify(self.name, "after pump thread start", NotificationType.INFO)
             while self.running:
                 sensor_value = current_temp = self.get_sensor_value(self.kettle.sensor).get("value")
                 target_temp = self.get_kettle_target_temp(self.id)
@@ -112,6 +116,7 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
         except asyncio.CancelledError as e:
             pass
         except Exception as e:
+            self.cbpi.notify(self.name, "BM_PIDSmartBoilWithPump Error {}".format(e), NotificationType.INFO)
             logging.error("BM_PIDSmartBoilWithPump Error {}".format(e))
         finally:
             self.running = False
