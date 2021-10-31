@@ -44,9 +44,6 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
                     await asyncio.sleep(1)
                     if self.get_sensor_value(self.kettle.sensor).get("value") >= self.max_pump_temp:
                         break
-                    #     self._logger.debug("pump max temp reached, pump turned off")
-                    #     await self.actor_off(self.agitator)
-                    #     pump_on = False
                 if pump_on:
                     self._logger.debug("resting pump")
                     await self.actor_off(self.agitator)
