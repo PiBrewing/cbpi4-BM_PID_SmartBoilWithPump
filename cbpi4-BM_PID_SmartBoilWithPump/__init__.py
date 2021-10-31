@@ -25,8 +25,8 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
         super().__init__(cbpi, id, props)
         self._logger = logging.getLogger(type(self).__name__)
         self.sample_time, self.max_output, self.pid = None, None, None
-        self.work_time, self.rest_time, self.max_output_boil, self.max_boil_temp, self.max_pid_temp, self.max_pump_temp \
-            = None, None, None, None, None, None
+        self.work_time, self.rest_time, self.max_output_boil = None, None, None
+        self.max_boil_temp, self.max_pid_temp, self.max_pump_temp = None, None, None
         self.kettle, self.heater, self.agitator = None, None, None
 
     async def on_stop(self):
@@ -34,14 +34,14 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
 
     async def pump_control(self):
         while self.running:
-            if self.get_sensor_value(self.kettle.sensor).get("value") < self.pump_max_temp:
+            if self.get_sensor_value(self.kettle.sensor).get("value") < self.max_pump_temp:
                 self._logger.debug("starting pump")
                 await self.actor_on(self.agitator)
                 off_time = time.time() + self.work_time
-                # while time.time() < off_time:
-                #     await asyncio.sleep(2)
-                #     if self.get_sensor_value(self.kettle.sensor).get("value") >= self.pump_max_temp:
-                #         await self.actor_off(self.agitator)
+                while time.time() < off_time:
+                    await asyncio.sleep(2)
+                    if self.get_sensor_value(self.kettle.sensor).get("value") >= self.max_pump_temp:
+                        await self.actor_off(self.agitator)
                 self._logger.debug("resting pump")
                 await self.actor_off(self.agitator)
                 await asyncio.sleep(self.rest_time)
