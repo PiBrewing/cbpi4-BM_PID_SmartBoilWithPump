@@ -1,9 +1,7 @@
 import asyncio
-from asyncio import tasks
 import logging
 from cbpi.api import *
 import time
-import datetime
 
 
 @parameters([Property.Number(label="P", configurable=True, default_value=117.0795, description="P Value of PID"),
@@ -40,10 +38,10 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
                 self._logger.debug("starting pump")
                 await self.actor_on(self.agitator)
                 off_time = time.time() + self.work_time
-                while time.time() < off_time:
-                    await asyncio.sleep(2)
-                    if self.get_sensor_value(self.kettle.sensor).get("value") >= self.pump_max_temp:
-                        await self.actor_off(self.agitator)
+                # while time.time() < off_time:
+                #     await asyncio.sleep(2)
+                #     if self.get_sensor_value(self.kettle.sensor).get("value") >= self.pump_max_temp:
+                #         await self.actor_off(self.agitator)
                 self._logger.debug("resting pump")
                 await self.actor_off(self.agitator)
                 await asyncio.sleep(self.rest_time)
@@ -102,10 +100,10 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
 
             logging.info("CustomLogic P:{} I:{} D:{} {} {}".format(p, i, d, self.kettle, self.heater))
 
-            # pump_controller = asyncio.create_task(self.pump_control())
+            pump_controller = asyncio.create_task(self.pump_control())
             temp_controller = asyncio.create_task(self.temp_control())
 
-            # await pump_controller
+            await pump_controller
             await temp_controller
 
         except asyncio.CancelledError as e:
