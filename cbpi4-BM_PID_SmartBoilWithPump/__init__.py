@@ -4,8 +4,6 @@ import logging
 from cbpi.api import *
 import time
 import datetime
-import threading
-
 
 
 @parameters([Property.Number(label="P", configurable=True, default_value=117.0795, description="P Value of PID"),
@@ -28,80 +26,87 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
     def __init__(self, cbpi, id, props):
         super().__init__(cbpi, id, props)
         self._logger = logging.getLogger(type(self).__name__)
+        self.sample_time, self.max_output, self.pid = None, None, None
+        self.work_time, self.rest_time, self.max_output_boil, self.max_boil_temp, self.max_pid_temp, self.max_pump_temp\
+            = None, None, None, None, None, None
+        self.kettle, self.heater, self.agitator = None, None, None
 
     async def on_stop(self):
         await self.actor_off(self.agitator)
 
-    async def pump_control(self, pump_max_temp):
-        work_time = float(self.props.get("Rest_Interval", 600))
-        rest_time = float(self.props.get("Rest_Time", 60))
-        while True:
-            if self.get_sensor_value(self.kettle.sensor).get("value") < pump_max_temp:
+    async def pump_control(self):
+        while self.running:
+            if self.get_sensor_value(self.kettle.sensor).get("value") < self.pump_max_temp:
                 self._logger.debug("starting pump")
                 await self.actor_on(self.agitator)
-                off_time = time.time() + work_time
+                off_time = time.time() + self.work_time
                 while time.time() < off_time:
-                    if self.get_sensor_value(self.kettle.sensor).get("value") >= pump_max_temp:
-                        await self.actor_off(self.agitator)
                     await asyncio.sleep(2)
+                    if self.get_sensor_value(self.kettle.sensor).get("value") >= self.pump_max_temp:
+                        await self.actor_off(self.agitator)
                 self._logger.debug("resting pump")
                 # await self.actor_off(self.agitator)
-                await asyncio.sleep(rest_time)
+                await asyncio.sleep(self.rest_time)
             else:
                 if self.get_actor_state(self.agitator):
                     await self.actor_off(self.agitator)
 
+    async def temp_control(self):
+        while self.running:
+            sensor_value = current_temp = self.get_sensor_value(self.kettle.sensor).get("value")
+            target_temp = self.get_kettle_target_temp(self.id)
+            if current_temp >= self.max_boil_temp:
+                heat_percent = self.max_output_boil
+            elif current_temp >= self.max_pid_temp:
+                heat_percent = self.max_output
+            else:
+                heat_percent = self.pid.calc(sensor_value, target_temp)
+
+            heating_time = self.sample_time * heat_percent / 100
+            wait_time = self.sample_time - heating_time
+            if heating_time > 0:
+                await self.actor_on(self.heater)
+                await asyncio.sleep(heating_time)
+            if wait_time > 0:
+                await self.actor_off(self.heater)
+                await asyncio.sleep(wait_time)
+
     async def run(self):
         try:
-            sampleTime = 5
+            self.sample_time = 5
+            self.max_output = 100
             p = float(self.props.get("P", 117.0795))
             i = float(self.props.get("I", 0.2747))
             d = float(self.props.get("D", 41.58))
-            maxoutput = 100
-            Max_PID_Temp = float(self.props.get("Max_PID_Temp", 88))
-            Pump_Max_Temp = float(self.props.get("Max_Pump_Temp", 110))
-            maxoutputboil = float(self.props.get("Max_Boil_Output", 85))
-            maxtempboil = float(self.props.get("Max_Boil_Temp", 98))
+            self.pid = PIDArduino(self.sample_time, p, i, d, 0, self.max_output)
 
-            self.TEMP_UNIT = self.get_config_value("TEMP_UNIT", "C")
+            self.work_time = float(self.props.get("Rest_Interval", 600))
+            self.rest_time = float(self.props.get("Rest_Time", 60))
+            self.max_output_boil = float(self.props.get("Max_Boil_Output", 85))
+            self.max_boil_temp = float(self.props.get("Max_Boil_Temp", 98))
+
+            mpidt = float(self.props.get("Max_PID_Temp", 88))
+            mpt = float(self.props.get("Max_Pump_Temp", 110))
+            temp_unit = self.get_config_value("TEMP_UNIT", "C")
 
             self.kettle = self.get_kettle(self.id)
             self.heater = self.kettle.heater
             self.agitator = self.kettle.agitator
 
-            if self.TEMP_UNIT != "C":
-                maxtemppid = round(9.0 / 5.0 * Max_PID_Temp + 32, 2)
-                pump_max_temp = round(9.0 / 5.0 * Pump_Max_Temp + 32, 2)
+            if temp_unit != "C":
+                self.max_pid_temp = round(9.0 / 5.0 * mpidt + 32, 2)
+                self.max_pump_temp = round(9.0 / 5.0 * mpt + 32, 2)
             else:
-                maxtemppid = float(Max_PID_Temp)
-                pump_max_temp = float(Pump_Max_Temp)
-
-            self.pump_thread = threading.Thread(target=self.pump_control, args=pump_max_temp)
-            pid = PIDArduino(sampleTime, p, i, d, 0, maxoutput)
+                self.max_pid_temp = float(mpidt)
+                self.max_pump_temp = float(mpt)
 
             logging.info("CustomLogic P:{} I:{} D:{} {} {}".format(p, i, d, self.kettle, self.heater))
 
-            while await self.pump_control(110):
-                # current_temp, sensor_value, target_temp = 10, 10, 10  # todo
-                while self.running:
-                    sensor_value = current_temp = self.get_sensor_value(self.kettle.sensor).get("value")
-                    target_temp = self.get_kettle_target_temp(self.id)
-                    if current_temp >= maxtempboil:
-                        heat_percent = maxoutputboil
-                    elif current_temp >= maxtemppid:
-                    # elif current_temp >= 30:  # todo
-                        heat_percent = maxoutput
-                    else:
-                        heat_percent = pid.calc(sensor_value, target_temp)
+            pump_controller = asyncio.create_task(self.pump_control())
+            temp_controller = asyncio.create_task(self.temp_control())
 
-                    heating_time = sampleTime * heat_percent / 100
-                    wait_time = sampleTime - heating_time
-                    if heating_time > 0:
-                        await self.actor_on(self.heater)
-                        await asyncio.sleep(heating_time)
-                    if wait_time > 0:
-                        await self.actor_off(self.heater)
-                        await asyncio.sleep(wait_time)
+            await pump_controller
+            await temp_controller
 
         except asyncio.CancelledError as e:
             pass
@@ -157,7 +162,7 @@ class PIDArduino(object):
         dInput = inputValue - self._lastInput
 
         # In order to prevent windup, only integrate if the process is not saturated
-        if self._lastOutput < self._outputMax and self._lastOutput > self._outputMin:
+        if self._outputMax > self._lastOutput > self._outputMin:
             self._iTerm += self._Ki * error
             self._iTerm = min(self._iTerm, self._outputMax)
             self._iTerm = max(self._iTerm, self._outputMin)
