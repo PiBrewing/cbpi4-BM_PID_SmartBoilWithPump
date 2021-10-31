@@ -51,6 +51,7 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
                 if self.get_actor_state(self.agitator):
                     await self.actor_off(self.agitator)
 
+
     async def temp_control(self):
         while self.running:
             sensor_value = current_temp = self.get_sensor_value(self.kettle.sensor).get("value")
@@ -97,8 +98,8 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
                 self.max_pid_temp = round(9.0 / 5.0 * mpidt + 32, 2)
                 self.max_pump_temp = round(9.0 / 5.0 * mpt + 32, 2)
             else:
-                self.max_pid_temp = float(mpidt)
-                self.max_pump_temp = float(mpt)
+                self.max_pid_temp = mpidt
+                self.max_pump_temp = mpt
 
             logging.info("CustomLogic P:{} I:{} D:{} {} {}".format(p, i, d, self.kettle, self.heater))
 
@@ -203,17 +204,17 @@ def setup(cbpi):
     cbpi.plugin.register("BM_PID_SmartBoilWithPump", BM_PID_SmartBoilWithPump)
 
 
-# class Mock:
-#
-#     def __init__(self):
-#         self.kettle = "a"
-#
-#     def get(self, a, b):
-#         return 1
-#
-#
-# if __name__ == '__main__':
-#     bm = BM_PID_SmartBoilWithPump(Mock(), 1, Mock())
-#     loop = asyncio.get_event_loop()
-#     coroutine = bm.run()
-#     loop.run_until_complete(coroutine)
+class Mock:
+
+    def __init__(self):
+        self.kettle = "a"
+
+    async def get(self, a, b):
+        return a
+
+
+if __name__ == '__main__':
+    bm = BM_PID_SmartBoilWithPump(Mock(), 1, Mock())
+    loop = asyncio.get_event_loop()
+    coroutine = bm.run()
+    loop.run_until_complete(coroutine)
