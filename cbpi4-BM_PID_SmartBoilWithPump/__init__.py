@@ -79,7 +79,7 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
                 maxtemppid = float(Max_PID_Temp)
                 pump_max_temp = float(Pump_Max_Temp)
 
-            self.pump_thread = threading.Thread(target=self.pump_control, args=(self, pump_max_temp))
+            self.pump_thread = threading.Thread(target=self.pump_control, args=pump_max_temp)
 
             pid = PIDArduino(sampleTime, p, i, d, 0, maxoutput)
 
@@ -89,7 +89,6 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
             logging.info("CustomLogic P:{} I:{} D:{} {} {}".format(p, i, d, self.kettle, self.heater))
 
             self.pump_thread.start()
-            self.pump_thread.run()
             while self.running:
                 sensor_value = current_temp = self.get_sensor_value(self.kettle.sensor).get("value")
                 target_temp = self.get_kettle_target_temp(self.id)
