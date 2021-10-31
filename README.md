@@ -17,7 +17,6 @@
 	- Max Boil Output: Maximum Power during when Boil Temp is reached
 	- Max Boil Temp: When Temp is reached, power is set to Max Boil Output
 	- Max PID Temp: PID is switched off above this temperature
-	- Internal Loop: Seconds of the internal loop -> Determines maximum PID resolution
 	- Rest Interval: Time interval in seconds after which Pump is switched off
 	- Rest Time: Pump is switched off for specified time in seconds
 	
