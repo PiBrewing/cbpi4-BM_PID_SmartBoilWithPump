@@ -7,7 +7,7 @@ import time
 @parameters([Property.Number(label="P", configurable=True, default_value=117.0795, description="P Value of PID"),
              Property.Number(label="I", configurable=True, default_value=0.2747, description="I Value of PID"),
              Property.Number(label="D", configurable=True, default_value=41.58, description="D Value of PID"),
-             Property.Number(label="Max_Pump_Temp", configurable=True, default_value=110,
+             Property.Number(label="Max_Pump_Temp", configurable=True, default_value=88,
                              description="Max temp the pump can work in."),
              Property.Number(label="Max_Boil_Output", configurable=True, default_value=85,
                              description="Power when Max Boil Temperature is reached."),
@@ -30,46 +30,66 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
         self.kettle, self.heater, self.agitator = None, None, None
 
     async def on_stop(self):
+        # ensure to switch also pump off when logic stops
         await self.actor_off(self.agitator)
 
+    # subroutine that controlls pump aue and ump stop if max pump temp is reached
     async def pump_control(self):
-        pump_on = self.get_actor_state(self.agitator)
+        #get pump based on agitator id
+        self.pump = self.cbpi.actor.find_by_id(self.agitator)
+
         while self.running:
+            # get current pump status
+            pump_on = self.pump.instance.state
+            # if the current temp is below the max pump temp, check if pause time is reached to pause pump
             if self.get_sensor_value(self.kettle.sensor).get("value") < self.max_pump_temp:
                 self._logger.debug("starting pump")
+                #switch the pump on
                 await self.actor_on(self.agitator)
+                # calculate time, when pump should do the next pause
                 off_time = time.time() + self.work_time
+                # run pump until next pause time is reached
                 while time.time() < off_time:
                     await asyncio.sleep(1)
+                    # stop cycle, if current temp is higher than max pump temp
                     if self.get_sensor_value(self.kettle.sensor).get("value") >= self.max_pump_temp:
                         break
+                # pause pump when active pump Interval is completed
                 self._logger.debug("resting pump")
                 await self.actor_off(self.agitator)
-                pump_on = False
                 await asyncio.sleep(self.rest_time)
+            # If temeprature is above max pump temp, and pump is on, switch it off
+            # Staops also the pump if user switches it on and temp is abouve max pump temp
             else:
                 if pump_on:
                     self._logger.debug("pump max temp reached, pump turned off")
                     await self.actor_off(self.agitator)
-                    pump_on = False
-                await asyncio.sleep(2)
+                await asyncio.sleep(1)
 
+    # subroutine that controlls temperature via pid controll
     async def temp_control(self):
         while self.running:
+            # get current temeprature
             sensor_value = current_temp = self.get_sensor_value(self.kettle.sensor).get("value")
+            # get the current target temperature for the kettle
             target_temp = self.get_kettle_target_temp(self.id)
+            # if current temperature is higher the defined boil temp, use fixed heating percent instead of PID values for controlled boiling
             if current_temp >= self.max_boil_temp:
                 heat_percent = self.max_output_boil
+            # if current temperature is above max pid temp (should be higher than mashout temp and lower then max boil temp) 100% output will be used untile boil temp is reached
             elif current_temp >= self.max_pid_temp:
                 heat_percent = self.max_output
+            # at lower temepratures, PID algorythm will valculate heat percent value
             else:
                 heat_percent = self.pid.calc(sensor_value, target_temp)
-
+            # Heating and witing time are calculated based on the fixed sample time (5 sec) and the heat percent
             heating_time = self.sample_time * heat_percent / 100
             wait_time = self.sample_time - heating_time
+            # switch heater on if heating time is not 0 (prevents pulsing)
             if heating_time > 0:
                 await self.actor_on(self.heater)
                 await asyncio.sleep(heating_time)
+            # switch heater off, if waiting time is not 0 (prevents pulsing)
             if wait_time > 0:
                 await self.actor_off(self.heater)
                 await asyncio.sleep(wait_time)
@@ -86,22 +106,20 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
             self.work_time = float(self.props.get("Rest_Interval", 600))
             self.rest_time = float(self.props.get("Rest_Time", 60))
             self.max_output_boil = float(self.props.get("Max_Boil_Output", 85))
-            self.max_boil_temp = float(self.props.get("Max_Boil_Temp", 98))
+            
+            self.TEMP_UNIT = self.get_config_value("TEMP_UNIT", "C")
+            boilthreshold = 98 if self.TEMP_UNIT == "C" else 208
+            maxpidtemp = 88 if self.TEMP_UNIT == "C" else 190
+            maxpumptemp = 88 if self.TEMP_UNIT == "C" else 190
 
-            mpidt = float(self.props.get("Max_PID_Temp", 88))
-            mpt = float(self.props.get("Max_Pump_Temp", 110))
-            temp_unit = self.get_config_value("TEMP_UNIT", "C")
+
+            self.max_boil_temp = float(self.props.get("Max_Boil_Temp", boilthreshold))
+            self.max_pid_temp = float(self.props.get("Max_PID_Temp", maxpidtemp))
+            self.max_pump_temp = float(self.props.get("Max_Pump_Temp", maxpumptemp))
 
             self.kettle = self.get_kettle(self.id)
             self.heater = self.kettle.heater
             self.agitator = self.kettle.agitator
-
-            if temp_unit != "C":
-                self.max_pid_temp = round(9.0 / 5.0 * mpidt + 32, 2)
-                self.max_pump_temp = round(9.0 / 5.0 * mpt + 32, 2)
-            else:
-                self.max_pid_temp = mpidt
-                self.max_pump_temp = mpt
 
             logging.info("CustomLogic P:{} I:{} D:{} {} {}".format(p, i, d, self.kettle, self.heater))
 

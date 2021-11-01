@@ -26,5 +26,6 @@
 
 Changelog:
 
-15.03.21: Support for cbpi >= 4.0.0.32
-31.10.21: Changed logic to coroutines
+- 01.11.21: Merged Pull request from madhatguy ansd fixed some bugs
+- 15.03.21: Support for cbpi >= 4.0.0.32
+- 31.10.21: Changed logic to coroutines
