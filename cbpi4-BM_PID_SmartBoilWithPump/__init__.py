@@ -68,6 +68,8 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
 
     # subroutine that controlls temperature via pid controll
     async def temp_control(self):
+        await self.actor_on(self.heater,0)
+        heat_percent_old = 0
         while self.running:
             # get current temeprature
             sensor_value = current_temp = self.get_sensor_value(self.kettle.sensor).get("value")
@@ -82,17 +84,12 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
             # at lower temepratures, PID algorythm will valculate heat percent value
             else:
                 heat_percent = self.pid.calc(sensor_value, target_temp)
-            # Heating and witing time are calculated based on the fixed sample time (5 sec) and the heat percent
-            heating_time = self.sample_time * heat_percent / 100
-            wait_time = self.sample_time - heating_time
-            # switch heater on if heating time is not 0 (prevents pulsing)
-            if heating_time > 0:
-                await self.actor_on(self.heater)
-                await asyncio.sleep(heating_time)
-            # switch heater off, if waiting time is not 0 (prevents pulsing)
-            if wait_time > 0:
-                await self.actor_off(self.heater)
-                await asyncio.sleep(wait_time)
+
+            # Test with actor power
+            if heat_percent != heat_percent_old:
+                await self.actor_set_power(self.heater,heat_percent)
+                heat_percent_old = heat_percent
+            await asyncio.sleep(0.2)
 
     async def run(self):
         try:
