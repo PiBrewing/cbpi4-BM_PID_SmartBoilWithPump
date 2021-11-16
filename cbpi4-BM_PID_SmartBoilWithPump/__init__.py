@@ -89,7 +89,7 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
             if heat_percent != heat_percent_old:
                 await self.actor_set_power(self.heater,heat_percent)
                 heat_percent_old = heat_percent
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(1)
 
     async def run(self):
         try:
