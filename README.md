@@ -8,7 +8,19 @@
 - Power to run boil can be specified in the plugin
 - Pump Intervals cen be set to have a pump rest on specified intervals for a specified time (e.g. 60 seconds every 600 seconds which is a default for the Braumeister controller)
 
-- The current version requires cbpi >= 4.0.0.45 from avollkopf's repo.
+
+### Installation:
+
+You can install it directly via pypi.org:	
+- sudo pip3 install cbpi4-BM-PID-SmartBoilWithPump 
+
+Alternativeley you can install (or clone) it from the GIT Repo. In case of updates, you will find them here first:
+- sudo pip3 install https://github.com/avollkopf/cbpi4-BM_PID_SmartBoilWithPump/archive/main.zip
+
+Afterwards you will need to activate the plugin:
+- cbpi add cbpi4-BM_PID_SmartBoilWithPump
+	
+- cbpi >= 4.0.0.45 from my fork is required. The setup will check, if this repo is installed
 
 ## Parameters:
 
