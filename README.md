@@ -8,11 +8,17 @@
 - Power to run boil can be specified in the plugin
 - Pump Intervals cen be set to have a pump rest on specified intervals for a specified time (e.g. 60 seconds every 600 seconds which is a default for the Braumeister controller)
 
+- The current version requires cbpi >= 4.0.0.45 from avollkopf's repo.
+
 ## Parameters:
+
+![Settings](https://github.com/avollkopf/cbpi4-BM_PID_SmartBoilWithPump/blob/main/cbpi4-BM_PID_SmartBoilWithPump-logic.png?raw=true)
+
 - Configurable:
 	- P: Proportional - Takes current value into account
 	- I: Integral - Takes past values into account
 	- D: Derivative - Takes future values into account
+	- SampleTime - 2 or 5 seconds -> how often the logic calculates the power setting
 	- Max Pump Temp: Pump is switched off above this temperature and cannot be switched back on
 	- Max Boil Output: Maximum Power during when Boil Temp is reached
 	- Max Boil Temp: When Temp is reached, power is set to Max Boil Output
@@ -26,6 +32,7 @@
 
 Changelog:
 
+- 21.11.21: Updated setup and Readme 
 - 15.11.21: Adapted to cbpi 4.0.0.45 with actor power settings
 - 01.11.21: Merged Pull request from madhatguy ansd fixed some bugs
 - 15.03.21: Support for cbpi >= 4.0.0.32
