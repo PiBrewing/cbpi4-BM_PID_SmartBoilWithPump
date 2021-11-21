@@ -7,6 +7,7 @@ import time
 @parameters([Property.Number(label="P", configurable=True, default_value=117.0795, description="P Value of PID"),
              Property.Number(label="I", configurable=True, default_value=0.2747, description="I Value of PID"),
              Property.Number(label="D", configurable=True, default_value=41.58, description="D Value of PID"),
+             Property.Select(label="SampleTime", options=[2,5], description="PID Sample time in seconds. Default: 5 (How often is the output calculation done)"),
              Property.Number(label="Max_Pump_Temp", configurable=True, default_value=88,
                              description="Max temp the pump can work in."),
              Property.Number(label="Max_Boil_Output", configurable=True, default_value=85,
@@ -89,11 +90,11 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
             if heat_percent != heat_percent_old:
                 await self.actor_set_power(self.heater,heat_percent)
                 heat_percent_old = heat_percent
-            await asyncio.sleep(1)
+            await asyncio.sleep(self.sample_time)
 
     async def run(self):
         try:
-            self.sample_time = 5
+            self.sample_time = int(self.props.get("SampleTime",5))
             self.max_output = 100
             p = float(self.props.get("P", 117.0795))
             i = float(self.props.get("I", 0.2747))
