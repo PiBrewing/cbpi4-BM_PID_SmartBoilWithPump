@@ -44,6 +44,7 @@ Afterwards you will need to activate the plugin:
 
 Changelog:
 
+- 01.12.21: Added security feature: current kettle power is monitored continuously and overwritten in case it's different from the logic loop value
 - 21.11.21: Updated setup and Readme 
 - 15.11.21: Adapted to cbpi 4.0.0.45 with actor power settings
 - 01.11.21: Merged Pull request from madhatguy ansd fixed some bugs
