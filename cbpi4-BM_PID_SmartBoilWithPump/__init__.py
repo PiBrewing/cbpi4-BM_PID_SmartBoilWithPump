@@ -39,26 +39,35 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
         #get pump based on agitator id
         self.pump = self.cbpi.actor.find_by_id(self.agitator)
 
+        await self.actor_on(self.agitator)
+
+        pump_rest = True
+        if (self.rest_time == 0) or (self.work_time == 0):
+            pump_rest = False
+
         while self.running:
             # get current pump status
             pump_on = self.pump.instance.state
             # if the current temp is below the max pump temp, check if pause time is reached to pause pump
-            if self.get_sensor_value(self.kettle.sensor).get("value") < self.max_pump_temp:
-                self._logger.debug("starting pump")
-                #switch the pump on
-                await self.actor_on(self.agitator)
-                # calculate time, when pump should do the next pause
-                off_time = time.time() + self.work_time
-                # run pump until next pause time is reached
-                while time.time() < off_time:
+            if (self.get_sensor_value(self.kettle.sensor).get("value") < self.max_pump_temp):
+                if pump_rest == True:
+                    self._logger.debug("starting pump")
+                    #switch the pump on
+                    await self.actor_on(self.agitator)
+                    # calculate time, when pump should do the next pause
+                    off_time = time.time() + self.work_time
+                    # run pump until next pause time is reached
+                    while time.time() < off_time:
+                        await asyncio.sleep(1)
+                        # stop cycle, if current temp is higher than max pump temp
+                        if self.get_sensor_value(self.kettle.sensor).get("value") >= self.max_pump_temp:
+                            break
+                    # pause pump when active pump Interval is completed
+                    self._logger.debug("resting pump")
+                    await self.actor_off(self.agitator)
+                    await asyncio.sleep(self.rest_time)
+                else:
                     await asyncio.sleep(1)
-                    # stop cycle, if current temp is higher than max pump temp
-                    if self.get_sensor_value(self.kettle.sensor).get("value") >= self.max_pump_temp:
-                        break
-                # pause pump when active pump Interval is completed
-                self._logger.debug("resting pump")
-                await self.actor_off(self.agitator)
-                await asyncio.sleep(self.rest_time)
             # If temeprature is above max pump temp, and pump is on, switch it off
             # Staops also the pump if user switches it on and temp is abouve max pump temp
             else:
