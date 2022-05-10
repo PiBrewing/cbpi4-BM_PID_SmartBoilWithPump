@@ -7,7 +7,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(name='cbpi4-BM_PID_SmartBoilWithPump',
-      version='0.1.3',
+      version='0.1.4',
       description='CraftBeerPi4 PID Kettle Logic Plugin',
       author=['Alexander Vollkopf', 'Guy Lev'],
       author_email='avollkopf@web.de',
@@ -19,9 +19,6 @@ setup(name='cbpi4-BM_PID_SmartBoilWithPump',
       '': ['*.txt', '*.rst', '*.yaml'],
       'cbpi4-BM_PID_SmartBoilWithPump': ['*','*.txt', '*.rst', '*.yaml']},
       packages=['cbpi4-BM_PID_SmartBoilWithPump'],
-      install_requires=[
-            'cbpi',
-      ],
       long_description=long_description,
       long_description_content_type='text/markdown'
      )
