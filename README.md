@@ -17,10 +17,6 @@ You can install it directly via pypi.org:
 Alternativeley you can install (or clone) it from the GIT Repo. In case of updates, you will find them here first:
 - sudo pip3 install https://github.com/avollkopf/cbpi4-BM_PID_SmartBoilWithPump/archive/main.zip
 
-Afterwards you will need to activate the plugin:
-- cbpi add cbpi4-BM_PID_SmartBoilWithPump
-	
-- cbpi >= 4.0.0.45 from my fork is required. The setup will check, if this repo is installed
 
 ## Parameters:
 
@@ -44,6 +40,7 @@ Afterwards you will need to activate the plugin:
 
 Changelog:
 
+- 11.05.22: (0.1.5) Updated README (removed cbpi add)
 - 10.05.22: (0.1.4) removed cbpi dependency
 - 30.12.21: (0.1.3) Fixed 0 pump/rest time -> Pump will be sitched on at start and off if temp is above controll limit. But no pump pause is triggered
 - 01.12.21: (0.1.2) Added security feature: current kettle power is monitored continuously and overwritten in case it's different from the logic loop value
