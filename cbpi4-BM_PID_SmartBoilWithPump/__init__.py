@@ -2,6 +2,8 @@ import asyncio
 import logging
 from cbpi.api import *
 import time
+from cbpi.controller.step_controller import StepController
+import re
 
 
 @parameters([Property.Number(label="P", configurable=True, default_value=117.0795, description="P Value of PID"),
@@ -30,9 +32,24 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
         self.max_boil_temp, self.max_pid_temp, self.max_pump_temp = None, None, None
         self.kettle, self.heater, self.agitator = None, None, None
 
+        self.controller : StepController = cbpi.step
+
     async def on_stop(self):
         # ensure to switch also pump off when logic stops
         await self.actor_off(self.agitator)
+
+    async def get_activity(self):
+        active_step = None
+        data=self.controller.get_state()
+        try:
+            steps=data['steps']
+            for step in steps:
+                if step['status'] == "A":
+                    active_step=step 
+        except:
+           pass 
+
+        return active_step
 
     # subroutine that controlls pump aue and ump stop if max pump temp is reached
     async def pump_control(self):
@@ -63,9 +80,16 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
                         if self.get_sensor_value(self.kettle.sensor).get("value") >= self.max_pump_temp:
                             break
                     # pause pump when active pump Interval is completed
-                    self._logger.debug("resting pump")
-                    await self.actor_off(self.agitator)
-                    await asyncio.sleep(self.rest_time)
+                    # check if timer is running or if step is ramping -> pump will be only paused if timer is running and not during ramp
+                    active_step = await self.get_activity()
+                    state_text=active_step.get('state_text')
+                    check_running_timer = re.compile('[0-9]{2}:[0-9]{2}:[0-9]{2}')
+                    if check_running_timer.match(state_text) is not None:
+                        self._logger.debug("resting pump")
+                        logging.info("Timer is running")
+                        logging.info("Step {}".format(state_text))
+                        await self.actor_off(self.agitator)
+                        await asyncio.sleep(self.rest_time)
                 else:
                     await asyncio.sleep(1)
             # If temeprature is above max pump temp, and pump is on, switch it off
