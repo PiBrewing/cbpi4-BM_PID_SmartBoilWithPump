@@ -40,6 +40,7 @@ Alternativeley you can install (or clone) it from the GIT Repo. In case of updat
 
 Changelog:
 
+- 14.06.22: (0.1.6) Disable pump pause during temperature ramp -> pause will take effect only on active timer
 - 11.05.22: (0.1.5) Updated README (removed cbpi add)
 - 10.05.22: (0.1.4) removed cbpi dependency
 - 30.12.21: (0.1.3) Fixed 0 pump/rest time -> Pump will be sitched on at start and off if temp is above controll limit. But no pump pause is triggered
