@@ -81,10 +81,13 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
                         if self.get_sensor_value(self.kettle.sensor).get("value") >= self.max_pump_temp:
                             break
                     # pause pump when active pump Interval is completed
-                    if self.rest_on_active_timer:
-                        # check if timer is running or if step is ramping -> pump will be only paused if timer is running and not during ramp
+                    try:
                         active_step = await self.get_activity()
                         state_text=active_step.get('state_text')
+                    except:
+                        active_step = None
+                    if self.rest_on_active_timer and active_step is not None:
+                        # check if timer is running or if step is ramping -> pump will be only paused if timer is running and not during ramp
                         check_running_timer = re.compile('[0-9]{2}:[0-9]{2}:[0-9]{2}')
                         if check_running_timer.match(state_text) is not None:
                             self._logger.debug("resting pump")
