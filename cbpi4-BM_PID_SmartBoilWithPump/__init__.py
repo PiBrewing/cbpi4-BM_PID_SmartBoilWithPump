@@ -18,6 +18,7 @@ import re
                              description="When Temperature reaches this, power will be reduced to Max Boil Output."),
              Property.Number(label="Max_PID_Temp", configurable=True,
                              description="When this temperature is reached, PID will be turned off"),
+             Property.Select(label="RestOnActiveTimer", options=["Yes","No"], description="Rest Pump only on active step timer (not during temp ramp). Default: Yes"),                             
              Property.Number(label="Rest_Interval", configurable=True, default_value=600,
                              description="Rest the pump after this many seconds during the mash."),
              Property.Number(label="Rest_Time", configurable=True, default_value=60,
@@ -80,44 +81,49 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
                         if self.get_sensor_value(self.kettle.sensor).get("value") >= self.max_pump_temp:
                             break
                     # pause pump when active pump Interval is completed
-                    # check if timer is running or if step is ramping -> pump will be only paused if timer is running and not during ramp
-                    active_step = await self.get_activity()
-                    state_text=active_step.get('state_text')
-                    check_running_timer = re.compile('[0-9]{2}:[0-9]{2}:[0-9]{2}')
-                    if check_running_timer.match(state_text) is not None:
-                        self._logger.debug("resting pump")
-                        logging.info("Timer is running")
-                        logging.info("Step {}".format(state_text))
-                        await self.actor_off(self.agitator)
-                        await asyncio.sleep(self.rest_time)
+                    if self.rest_on_active_timer:
+                        # check if timer is running or if step is ramping -> pump will be only paused if timer is running and not during ramp
+                        active_step = await self.get_activity()
+                        state_text=active_step.get('state_text')
+                        check_running_timer = re.compile('[0-9]{2}:[0-9]{2}:[0-9]{2}')
+                        if check_running_timer.match(state_text) is not None:
+                            self._logger.debug("resting pump")
+                            logging.debug("Timer is running")
+                            logging.debug("Step {}".format(state_text))
+                            await self.actor_off(self.agitator)
+                            await asyncio.sleep(self.rest_time)
+                    else:
+                            self._logger.debug("resting pump")
+                            await self.actor_off(self.agitator)
+                            await asyncio.sleep(self.rest_time)
                 else:
                     await asyncio.sleep(1)
-            # If temeprature is above max pump temp, and pump is on, switch it off
-            # Staops also the pump if user switches it on and temp is abouve max pump temp
+            # If temperature is above max pump temp, and pump is on, switch it off
+            # Stops also the pump if user switches it on and temp is above max pump temp
             else:
                 if pump_on:
                     self._logger.debug("pump max temp reached, pump turned off")
                     await self.actor_off(self.agitator)
                 await asyncio.sleep(1)
 
-    # subroutine that controlls temperature via pid controll
+    # subroutine that controls temperature via pid control
     async def temp_control(self):
         await self.actor_on(self.heater,0)
         logging.info("Heater on with zero Power")
         heat_percent_old = 0
         while self.running:
             current_kettle_power= self.heater_actor.power
-            # get current temeprature
+            # get current temperature
             sensor_value = current_temp = self.get_sensor_value(self.kettle.sensor).get("value")
             # get the current target temperature for the kettle
             target_temp = self.get_kettle_target_temp(self.id)
             # if current temperature is higher the defined boil temp, use fixed heating percent instead of PID values for controlled boiling
             if current_temp >= self.max_boil_temp:
                 heat_percent = self.max_output_boil
-            # if current temperature is above max pid temp (should be higher than mashout temp and lower then max boil temp) 100% output will be used untile boil temp is reached
+            # if current temperature is above max pid temp (should be higher than mashout temp and lower then max boil temp) 100% output will be used until boil temp is reached
             elif current_temp >= self.max_pid_temp:
                 heat_percent = self.max_output
-            # at lower temepratures, PID algorythm will valculate heat percent value
+            # at lower temperatures, PID algorithm will calculate heat percent value
             else:
                 heat_percent = self.pid.calc(sensor_value, target_temp)
 
@@ -139,6 +145,8 @@ class BM_PID_SmartBoilWithPump(CBPiKettleLogic):
             self.work_time = float(self.props.get("Rest_Interval", 600))
             self.rest_time = float(self.props.get("Rest_Time", 60))
             self.max_output_boil = float(self.props.get("Max_Boil_Output", 85))
+            self.restonactivetimer = self.props.get("RestOnActiveTimer", "Yes")
+            self.rest_on_active_timer = True if self.restonactivetimer == "Yes" else False
             
             self.TEMP_UNIT = self.get_config_value("TEMP_UNIT", "C")
             boilthreshold = 98 if self.TEMP_UNIT == "C" else 208

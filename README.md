@@ -31,6 +31,7 @@ Alternativeley you can install (or clone) it from the GIT Repo. In case of updat
 	- Max Boil Output: Maximum Power during when Boil Temp is reached
 	- Max Boil Temp: When Temp is reached, power is set to Max Boil Output
 	- Max PID Temp: PID is switched off above this temperature
+	- RestOnActiveTimer: Yes: Pump will rest only on active step timer. No: Pump rest is not dependent on mash steps
 	- Rest Interval: Time interval in seconds after which Pump is switched off
 	- Rest Time: Pump is switched off for specified time in seconds
 	
@@ -40,13 +41,14 @@ Alternativeley you can install (or clone) it from the GIT Repo. In case of updat
 
 Changelog:
 
+- 24.05.24: (0.1.7.a1) Test on de(activation) of pump pause during active timer
 - 14.06.22: (0.1.6) Disable pump pause during temperature ramp -> pause will take effect only on active timer
 - 11.05.22: (0.1.5) Updated README (removed cbpi add)
 - 10.05.22: (0.1.4) removed cbpi dependency
-- 30.12.21: (0.1.3) Fixed 0 pump/rest time -> Pump will be sitched on at start and off if temp is above controll limit. But no pump pause is triggered
+- 30.12.21: (0.1.3) Fixed 0 pump/rest time -> Pump will be switched on at start and off if temp is above control limit. But no pump pause is triggered
 - 01.12.21: (0.1.2) Added security feature: current kettle power is monitored continuously and overwritten in case it's different from the logic loop value
 - 21.11.21: Updated setup and Readme 
 - 15.11.21: Adapted to cbpi 4.0.0.45 with actor power settings
-- 01.11.21: Merged Pull request from madhatguy ansd fixed some bugs
+- 01.11.21: Merged Pull request from madhatguy and fixed some bugs
 - 15.03.21: Support for cbpi >= 4.0.0.32
 - 31.10.21: Changed logic to coroutines
