@@ -4,7 +4,7 @@
 
 ## Mash & Boil in single Kettle (e.g. Speidel Braumeister)
 - The Kettle logic is intended to be used in a single Kettle. It is a PID logic. PID parameters can be for instance derived from the PID AutoTune plugin (https://github.com/avollkopf/cbpi4-PIDAutoTune)
-- It runs on PID control until it reaches a specified temperature. Above that temperature it heates w/o PID logic until a specified boil temp is reached.
+- It runs on PID control until it reaches a specified temperature. Above that temperature it heats w/o PID logic until a specified boil temp is reached.
 - Power to run boil can be specified in the plugin
 - Pump Intervals cen be set to have a pump rest on specified intervals for a specified time (e.g. 60 seconds every 600 seconds which is a default for the Braumeister controller)
 
@@ -14,7 +14,7 @@
 You can install it directly via pypi.org:	
 - sudo pip3 install cbpi4-BM-PID-SmartBoilWithPump 
 
-Alternativeley you can install (or clone) it from the GIT Repo. In case of updates, you will find them here first:
+Alternatively you can install (or clone) it from the GIT Repo. In case of updates, you will find them here first:
 - sudo pip3 install https://github.com/avollkopf/cbpi4-BM_PID_SmartBoilWithPump/archive/main.zip
 
 
