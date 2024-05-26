@@ -41,7 +41,7 @@ Alternatively you can install (or clone) it from the GIT Repo. In case of update
 
 Changelog:
 
-- 24.05.24: (0.1.7.a2) Test on de(activation) of pump pause during active timer
+- 26.05.24: (0.1.7) De(activation) of pump pause during active timer as Option. Automode will now also work w/o steps
 - 14.06.22: (0.1.6) Disable pump pause during temperature ramp -> pause will take effect only on active timer
 - 11.05.22: (0.1.5) Updated README (removed cbpi add)
 - 10.05.22: (0.1.4) removed cbpi dependency
